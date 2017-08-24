@@ -4,29 +4,34 @@ import tornado.gen
 import tornado.httpclient
 
 from app.handlers.base import RequestHandler
-from app.storage import db
+from app.storage.db import EmailEmail
 
 
 class MailHandler(RequestHandler):
-    @property
-    def noise_remove(self, body):
+    @staticmethod
+    def noise_remove(body):
         stop_words = ('a', 'then', 'an', 'and', 'so', 'then')
         words = body.split()
         result = (' ').join([word for word in words if word.lower() not in stop_words])
         return result
 
-    @property
-    def compare_mail_body(self, body_one, body_two):
+    @staticmethod
+    def compare_mail_body(body_one, body_two):
         if body_one.split()[:10] == body_two.split()[:10]:
             return True
         else:
             return False
 
+    @staticmethod
+    def compare_mail_subject(subject_one, subject_two):
+        if subject_one.split()[:3] == subject_two.split()[:3]:
+            return True
+        else:
+            return False
+
     def post(self):
-        print("entramos al metodo post")
-        import pdb; pdb.set_trace()
-        id_one = self.get_argument('email_id_one')
-        id_two = self.get_argument('email_id_two')        
+        id_one = int(self.get_argument('email_id_one'))
+        id_two = int(self.get_argument('email_id_two'))        
         if any(x == None for x in (id_one, id_two)):
             self.set_status(400)
             error_message = "Missing one or more parameters."
@@ -34,7 +39,7 @@ class MailHandler(RequestHandler):
         cursor = self.db()
         mails = []
         for id in (id_one, id_two):
-            mail = cursor.query(EmailEmail).filter(EmailEmail.pk == id).first()
+            mail = cursor.query(EmailEmail).filter(EmailEmail.id == id).first()
             mails.append(mail)
         if len(mails) < 2:
             self.set_status(500)
@@ -48,5 +53,5 @@ class MailHandler(RequestHandler):
         else:
             result = [{'response': 'Emails are different'}]
 
-        self.write(json_encode(result))     
+        self.write(json.dumps(result))     
    
