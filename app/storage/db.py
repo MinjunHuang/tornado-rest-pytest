@@ -2,6 +2,7 @@
 import binascii
 import hashlib
 import datetime
+import pytz
 
 # SQLAlchemy
 from sqlalchemy import (Boolean, Column, Date, DateTime, Float, ForeignKey,
@@ -24,4 +25,17 @@ class EmailEmail(Base):
     __tablename__ = 'email_email'
 
     id = Column(Integer, primary_key=True)
-    body = Column(String(500), nullable=False, unique=True)
+    sender = Column(String(50), nullable=False)
+    receiver = Column(String(50), nullable=False)
+    subject = Column(String(500), nullable=False)
+    body = Column(String(500), nullable=False)
+    send_time = Column(DateTime, default=now())
+    receive_time = Column(DateTime, default=now())
+
+
+class ArchiveEmail(Base):
+    __tablename__ = 'archive_email'
+
+    id = Column(Integer, primary_key=True)
+    email_id = Column(Integer, nullable=False)
+    bury_email_id = Column(Integer, nullable=False)

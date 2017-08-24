@@ -4,7 +4,7 @@ import tornado.gen
 import tornado.httpclient
 
 from app.handlers.base import RequestHandler
-from app.storage.db import EmailEmail
+from app.storage.db import EmailEmail, ArchiveEmail
 
 
 class MailHandler(RequestHandler):
@@ -30,28 +30,37 @@ class MailHandler(RequestHandler):
             return False
 
     def post(self):
-        id_one = int(self.get_argument('email_id_one'))
-        id_two = int(self.get_argument('email_id_two'))        
-        if any(x == None for x in (id_one, id_two)):
-            self.set_status(400)
-            error_message = "Missing one or more parameters."
-            self.finish(error_message)
-        cursor = self.db()
-        mails = []
-        for id in (id_one, id_two):
-            mail = cursor.query(EmailEmail).filter(EmailEmail.id == id).first()
-            mails.append(mail)
-        if len(mails) < 2:
-            self.set_status(500)
-            error_message = "Email(s) doesn't exist"
-            self.finish(error_message)
-        
-        cln_bd_one = self.noise_remove(mails[0].body)
-        cln_by_two = self.noise_remove(mails[1].body)
-        if self.compare_mail_body(cln_bd_one, cln_by_two):
-            result = [{'response': 'Emails are equal'}]
-        else:
-            result = [{'response': 'Emails are different'}]
+        try:
+            id_one = int(self.get_argument('email_id_one'))
+            id_two = int(self.get_argument('email_id_two'))        
+            if any(x == None for x in (id_one, id_two)):
+                self.set_status(400)
+                error_message = "Missing one or more parameters."
+                self.finish(error_message)
+            cursor = self.db()
+            mails = []
+            # get emails from EmailEmail
+            for id in (id_one, id_two):
+                mail = cursor.query(EmailEmail).filter(EmailEmail.id == id).first()
+                mails.append(mail)
+             
+            cln_bd_one = self.noise_remove(mails[0].body)
+            cln_bd_two = self.noise_remove(mails[1].body)
+            sbj_one = mails[0].subject
+            sbj_two = mails[1].subject
 
-        self.write(json.dumps(result))     
-   
+            if self.compare_mail_body(cln_bd_one, cln_bd_two) and self.compare_mail_subject(sbj_one, sbj_two):
+                archive = ArchiveEmail(email_id=id_one, bury_email_id=id_two)
+                cursor.add(archive)
+                cursor.commit()
+                self.set_status(201)
+                message = "Emails were archived"
+                self.finish(message)
+            else:
+                self.set_status(201)
+                message = "Emails are not related"
+                self.finish(message)
+        except:
+            self.set_status(400)
+            message = "Something goes wrong"
+            self.finish(message)
