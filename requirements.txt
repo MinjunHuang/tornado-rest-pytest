@@ -1,5 +1,8 @@
-SQLAlchemy
-tornado
 mysqlclient
 pytest
+pytest-tornado
+pytest-xprocess
 pytz
+SQLAlchemy
+tornado
+	
